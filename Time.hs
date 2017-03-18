@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE BangPatterns              #-}
 {-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE StandaloneDeriving        #-}
 
 module Main (main) where
 
@@ -10,8 +10,8 @@ import           Control.DeepSeq
 import           Control.Monad
 import           Criterion.Main
 import           Criterion.Types
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Char8 as S8
+import           Data.ByteString          (ByteString)
+import qualified Data.ByteString.Char8    as S8
 import qualified Data.HashMap.Lazy
 import qualified Data.HashMap.Strict
 import qualified Data.HashTable.IO
@@ -24,6 +24,7 @@ import qualified Data.Judy
 import qualified Data.Map.Lazy
 import qualified Data.Map.Strict
 import qualified Data.Trie
+import qualified Data.Trie.Internal
 import           System.Directory
 import           System.Random
 
@@ -38,6 +39,9 @@ data FromListBS =
 
 data Intersection = forall f. NFData (f Int) =>
      Intersection String ([(Int,Int)] -> f Int) (f Int -> f Int -> f Int)
+
+data IntersectionBS = forall f. NFData (f Int) =>
+     IntersectionBS String ([(ByteString,Int)] -> f Int) (f Int -> f Int -> f Int)
 
 data Lookup =
   forall f. (NFData (f Int)) =>
@@ -127,6 +131,30 @@ main = do
                Data.IntMap.Strict.intersection
            ])
     , bgroup
+        "Intersection ByteString (Randomized)"
+        (intersectionBS
+           [ IntersectionBS
+               "Data.Map.Lazy"
+               Data.Map.Lazy.fromList
+               Data.Map.Lazy.intersection
+           , IntersectionBS
+               "Data.Map.Strict"
+               Data.Map.Strict.fromList
+               Data.Map.Strict.intersection
+           , IntersectionBS
+               "Data.HashMap.Lazy"
+               Data.HashMap.Lazy.fromList
+               Data.HashMap.Lazy.intersection
+           , IntersectionBS
+               "Data.HashMap.Strict"
+               Data.HashMap.Strict.fromList
+               Data.HashMap.Strict.intersection
+           , IntersectionBS
+               "Data.Trie"
+               Data.Trie.fromList
+               (Data.Trie.Internal.intersectBy (\a _ -> Just a))
+           ])
+    , bgroup
         "Lookup Int (Randomized)"
         (lookupRandomized
            [ Lookup "Data.Map.Lazy" Data.Map.Lazy.fromList Data.Map.Lazy.lookup
@@ -212,6 +240,23 @@ main = do
         (\args -> bench (title ++ ":" ++ show i) $ nf (uncurry intersect) args)
       | i <- [10, 100, 1000, 10000, 100000, 1000000]
       , Intersection title build intersect <- funcs
+      ]
+    intersectionBS funcs =
+      [ env
+        (let !args =
+               force
+                 -- ( build (zip (map (S8.pack.show) $ (randoms (mkStdGen 0) :: [Int])) [1 :: Int .. i])
+                 -- , build (zip (map (S8.pack.show) $ (randoms (mkStdGen 1) :: [Int])) [1 :: Int .. i]))
+                 ( build (map
+                          (first (S8.pack . show))
+                          (take i (zip (randoms (mkStdGen 0) :: [Int]) [1 ..])))
+                 , build (map
+                          (first (S8.pack . show))
+                          (take i (zip (randoms (mkStdGen 1) :: [Int]) [1 ..]))))
+         in pure args)
+        (\args -> bench (title ++ ":" ++ show i) $ nf (uncurry intersect) args)
+      | i <- [10, 100, 1000, 10000, 100000, 1000000]
+      , IntersectionBS title build intersect <- funcs
       ]
     insertBSRandomized funcs =
       [ env

@@ -1,4 +1,10 @@
 resolver: lts-6.20
 extra-deps:
   - judy-0.3.0
-  
+
+packages:
+- '.'
+- location:
+    git: https://github.com/unhammer/bytestring-trie-0.2.4.git
+    commit: 530e0250c2e076950152e4d7e307702835c85591
+  extra-dep: true
