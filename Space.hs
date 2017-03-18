@@ -1,25 +1,32 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns  #-}
 {-# LANGUAGE DeriveGeneric #-}
 
 -- | Example uses of comparing map-like data structures.
 
 module Main where
 
+import           Control.Arrow
 import           Control.DeepSeq
+import qualified Data.ByteString       as S
+import qualified Data.ByteString.Char8 as S8
 import qualified Data.HashMap.Lazy
 import qualified Data.HashMap.Strict
 import qualified Data.IntMap.Lazy
 import qualified Data.IntMap.Strict
 import qualified Data.Map.Lazy
 import qualified Data.Map.Strict
+import qualified Data.PerfectHash
+import qualified Data.Trie
 import           System.Random
 import           Weigh
 
 -- | Weigh maps.
 main :: IO ()
 main =
-  mainWith (do inserts
-               fromlists)
+  mainWith (do
+             inserts
+             fromlists
+             frombytestrings)
 
 inserts :: Weigh ()
 inserts = do func "Data.Map.Strict.insert mempty"
@@ -46,3 +53,24 @@ fromlists =
      func "Data.IntMap.Lazy.fromList    (1 million)" Data.IntMap.Lazy.fromList elems
      func "Data.HashMap.Strict.fromList (1 million)" Data.HashMap.Strict.fromList elems
      func "Data.HashMap.Lazy.fromList   (1 million)" Data.HashMap.Lazy.fromList elems
+
+
+frombytestrings :: Weigh ()
+frombytestrings =
+  do let !elems =
+             force
+                 (map
+                    (first (S8.pack . show))
+                    (take 1000000 (zip (randoms (mkStdGen 0) :: [Int]) [1 :: Int ..])))
+     func "Data.Map.Strict.fromList     (1 million)" Data.Map.Strict.fromList elems
+     func "Data.Map.Lazy.fromList       (1 million)" Data.Map.Lazy.fromList elems
+     func "Data.HashMap.Strict.fromList (1 million)" Data.HashMap.Strict.fromList elems
+     func "Data.HashMap.Lazy.fromList   (1 million)" Data.HashMap.Lazy.fromList elems
+     func "Data.Trie.fromList           (1 million)" Data.Trie.fromList elems
+     func "Data.PerfectHash.fromList    (1 million)" Data.PerfectHash.fromList elems
+
+instance NFData (Data.PerfectHash.PerfectHash a) where
+  rnf x = seq x ()
+
+instance NFData (Data.Trie.Trie a) where
+  rnf x = seq x ()

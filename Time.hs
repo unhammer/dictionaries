@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE BangPatterns              #-}
 {-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE StandaloneDeriving        #-}
 
 module Main (main) where
 
@@ -10,8 +10,8 @@ import           Control.DeepSeq
 import           Control.Monad
 import           Criterion.Main
 import           Criterion.Types
-import           Data.ByteString (ByteString)
-import qualified Data.ByteString.Char8 as S8
+import           Data.ByteString          (ByteString)
+import qualified Data.ByteString.Char8    as S8
 import qualified Data.HashMap.Lazy
 import qualified Data.HashMap.Strict
 import qualified Data.HashTable.IO
@@ -23,6 +23,7 @@ import qualified Data.IntMap.Strict
 import qualified Data.Judy
 import qualified Data.Map.Lazy
 import qualified Data.Map.Strict
+import qualified Data.PerfectHash
 import qualified Data.Trie
 import           System.Directory
 import           System.Random
@@ -53,6 +54,9 @@ data LookupIO =
 
 -- | TODO: We need a proper deepseq. But Trie seems to perform awfully anyway so far, anyway.
 instance NFData (Data.Trie.Trie a) where
+  rnf x = seq x ()
+
+instance NFData (Data.PerfectHash.PerfectHash a) where
   rnf x = seq x ()
 
 instance NFData (Data.HashTable.ST.Basic.HashTable s k v) where
@@ -176,6 +180,7 @@ main = do
            , FromListBS "Data.HashMap.Lazy" Data.HashMap.Lazy.fromList
            , FromListBS "Data.HashMap.Strict" Data.HashMap.Strict.fromList
            , FromListBS "Data.Trie" Data.Trie.fromList
+           , FromListBS "Data.PerfectHash" Data.PerfectHash.fromList
            ])
     , bgroup
         "FromList ByteString (Randomized)"
@@ -185,6 +190,7 @@ main = do
            , FromListBS "Data.HashMap.Lazy" Data.HashMap.Lazy.fromList
            , FromListBS "Data.HashMap.Strict" Data.HashMap.Strict.fromList
            , FromListBS "Data.Trie" Data.Trie.fromList
+           , FromListBS "Data.PerfectHash" Data.PerfectHash.fromList
            ])
     ]
   where

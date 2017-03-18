@@ -17,7 +17,9 @@ test-suite space
                , deepseq
                , containers
                , unordered-containers
+               , bytestring
                , bytestring-trie
+               , PerfectHash
                , random
 
 benchmark time
@@ -35,6 +37,7 @@ benchmark time
                    , bytestring-trie
                    , random, directory
                    , hashtables
+                   , PerfectHash
                    , judy
 
 executable report
@@ -42,7 +45,8 @@ executable report
   ghc-options:       -Wall -O2 -rtsopts
   main-is:           Report.hs
   build-depends:     base
-                   , bytestring, directory
+                   , bytestring
+                   , directory
                    , vector
                    , ghc-prim
                    , criterion
